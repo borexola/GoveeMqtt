@@ -882,7 +882,7 @@ impl DeviceCapability {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[serde(tag = "dataType", content = "content")]
+#[serde(tag = "dataType")]
 #[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub enum DeviceParameters {
     #[serde(rename = "ENUM")]
