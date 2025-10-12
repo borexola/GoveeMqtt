@@ -303,7 +303,7 @@ impl GoveeApiClient {
             if let Some(DeviceParameters::Typed(TypedDeviceParameters::Struct { fields })) = &cap.parameters {
                 for f in fields {
                     if f.field_name == "musicMode" {
-                        match &f.field_type {
+                        match f.field_type() {
                             DeviceParameters::Typed(TypedDeviceParameters::Enum { options }) => {
                                 for opt in options {
                                     result.push(format!("Music: {}", opt.name));
@@ -336,7 +336,7 @@ impl GoveeApiClient {
         if let Some(music_mode) = scene.strip_prefix("Music: ") {
             if let Some(cap) = device.capability_by_instance("musicMode") {
                 if let Some(field) = cap.struct_field_by_name("musicMode") {
-                    if let Some(value) = field.field_type.enum_parameter_by_name(music_mode) {
+                    if let Some(value) = field.field_type().enum_parameter_by_name(music_mode) {
                         let value = serde_json::json!({
                             "musicMode": value,
                             "sensitivity": 100,
@@ -703,7 +703,7 @@ impl HttpDeviceInfo {
     pub fn supports_segmented_rgb(&self) -> Option<std::ops::Range<u32>> {
         let cap = self.capability_by_instance("segmentedColorRgb")?;
         let field = cap.struct_field_by_name("segment")?;
-        match field.field_type {
+        match field.field_type() {
             DeviceParameters::Typed(TypedDeviceParameters::Array {
                 size:
                     Some(ArraySize {
@@ -734,11 +734,11 @@ impl HttpDeviceInfo {
     pub fn supports_segmented_brightness(&self) -> Option<(u32, u32)> {
         let cap = self.capability_by_instance("segmentedBrightness")?;
         let field = cap.struct_field_by_name("brightness")?;
-        match &field.field_type {
+        match field.field_type() {
             DeviceParameters::Typed(TypedDeviceParameters::Integer {
                 range: IntegerRange { min, max, .. },
                 ..
-            }) => Some((*min, *max)),
+            }) => Some((min, max)),
             _ => None,
         }
     }
@@ -930,20 +930,36 @@ impl TypedDeviceParameters {
     }
 }
 
+// THIS IS THE KEY FIX: Don't use flatten with recursive DeviceParameters
 #[derive(Deserialize, Serialize, Debug, Clone)]
-// No deny_unknown_fields here, because we embed via flatten
 pub struct StructField {
     #[serde(rename = "fieldName")]
     pub field_name: String,
-
+    
+    // Store all other fields as raw JSON to avoid recursive parsing issues
     #[serde(flatten)]
-    pub field_type: DeviceParameters,
+    pub field_data: serde_json::Map<String, JsonValue>,
+}
 
-    #[serde(rename = "defaultValue")]
-    pub default_value: Option<JsonValue>,
-
-    #[serde(default)]
-    pub required: bool,
+impl StructField {
+    // Provide a getter that parses on demand to maintain API compatibility
+    pub fn field_type(&self) -> DeviceParameters {
+        let value = JsonValue::Object(self.field_data.clone());
+        match serde_json::from_value::<TypedDeviceParameters>(value.clone()) {
+            Ok(typed) => DeviceParameters::Typed(typed),
+            Err(_) => DeviceParameters::Unknown(value),
+        }
+    }
+    
+    pub fn default_value(&self) -> Option<JsonValue> {
+        self.field_data.get("defaultValue").cloned()
+    }
+    
+    pub fn required(&self) -> bool {
+        self.field_data.get("required")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
