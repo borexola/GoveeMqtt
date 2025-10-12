@@ -708,35 +708,35 @@ impl HttpDeviceInfo {
 
     /// If supported, returns the number of segments
     pub fn supports_segmented_rgb(&self) -> Option<std::ops::Range<u32>> {
-        let cap = self.capability_by_instance("segmentedColorRgb")?;
-        let field = cap.struct_field_by_name("segment")?;
-        match field.field_type() {
-            DeviceParameters::Array {
-                size:
-                    Some(ArraySize {
-                        // These are the display indices. eg: 1-based
-                        min: label_min,
-                        max: label_max,
-                    }),
-                element_range:
-                    Some(ElementRange {
-                        // These are the actual indices. eg: 0-based
-                        min: range_min,
-                        // We ignore the max here, because the data
-                        // reported by Govee can be bogus:
-                        // <https://developer.govee.com/discuss/6599afb91cb48d002dbed2b8>
-                        max: _,
-                    }),
-                ..
-            } => {
-                // This range is an inclusive range, so add 1
-                let num_segments = (1 + label_max).saturating_sub(label_min);
-                // Return our exclusive range
-                Some(range_min..range_min + num_segments)
-            }
-            _ => None,
+    let cap = self.capability_by_instance("segmentedColorRgb")?;
+    let field = cap.struct_field_by_name("segment")?;
+    match field.field_type() {
+        DeviceParameters::Array {
+            size:
+                Some(ArraySize {
+                    // These are the display indices. eg: 1‑based
+                    min: label_min,
+                    max: label_max,
+                }),
+            element_range:
+                Some(ElementRange {
+                    // These are the actual indices. eg: 0‑based
+                    min: range_min,
+                    // We ignore the max here, because the data
+                    // reported by Govee can be bogus:
+                    // <https://developer.govee.com/discuss/6599afb91cb48d002dbed2b8>
+                    max: _,
+                }),
+            ..
+        } => {
+            // Dereference the &u32 values
+            let num_segments = (1 + *label_max).saturating_sub(*label_min);
+            // Return our exclusive range
+            Some(*range_min..*range_min + num_segments)
         }
+        _ => None,
     }
+}
 
     pub fn supports_segmented_brightness(&self) -> Option<(u32, u32)> {
         let cap = self.capability_by_instance("segmentedBrightness")?;
