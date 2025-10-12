@@ -540,7 +540,6 @@ impl GoveeApiClient {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 struct GetDeviceScenesResponse {
     #[serde(rename = "requestId")]
     pub request_id: String,
@@ -551,7 +550,6 @@ struct GetDeviceScenesResponse {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 struct GetDeviceScenesResponsePayload {
     pub sku: String,
     pub device: String,
@@ -629,7 +627,6 @@ struct GetDeviceStateRequestPayload {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 struct GetDeviceStateResponse {
     #[serde(rename = "requestId")]
     pub request_id: String,
@@ -640,7 +637,6 @@ struct GetDeviceStateResponse {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct HttpDeviceState {
     pub sku: String,
     pub device: String,
@@ -657,7 +653,6 @@ impl HttpDeviceState {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(tag = "type")]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct DeviceCapabilityState {
     #[serde(rename = "type")]
     pub kind: DeviceCapabilityKind,
@@ -666,7 +661,6 @@ pub struct DeviceCapabilityState {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 struct GetDevicesResponse {
     pub code: u32,
     pub message: String,
@@ -674,7 +668,6 @@ struct GetDevicesResponse {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct HttpDeviceInfo {
     pub sku: String,
     pub device: String,
@@ -853,7 +846,6 @@ pub enum DeviceCapabilityKind {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct DeviceCapability {
     #[serde(rename = "type")]
     pub kind: DeviceCapabilityKind,
@@ -904,7 +896,6 @@ impl DeviceParameters {
 // The actual typed parameters that we know about
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(tag = "dataType")]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub enum TypedDeviceParameters {
     #[serde(rename = "ENUM")]
     Enum { options: Vec<EnumOption> },
@@ -956,21 +947,18 @@ pub struct StructField {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct ElementRange {
     pub min: u32,
     pub max: u32,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct ArraySize {
     pub min: u32,
     pub max: u32,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct IntegerRange {
     pub min: u32,
     pub max: u32,
@@ -1033,7 +1021,6 @@ where
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct ArrayOption {
     pub value: u32,
 }
