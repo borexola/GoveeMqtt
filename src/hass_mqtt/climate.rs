@@ -44,7 +44,7 @@ pub fn parse_temperature_constraints(
     let units = instance
         .struct_field_by_name("unit")
         .and_then(|field| {
-            field.default_value.as_ref().and_then(|v| {
+            field.default_value().as_ref().and_then(|v| {
                 v.as_str()
                     .and_then(|s| TemperatureScale::from_str(s).map(Into::into).ok())
             })
