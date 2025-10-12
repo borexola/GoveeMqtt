@@ -176,5 +176,5 @@ jobs:
         with:
           args: |
             --all \
-            --cosign \
-            --target /data/addon
+            --target /data/addon \
+            --release "${{ env.ADDON_VERSION }}"
