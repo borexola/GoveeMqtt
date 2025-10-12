@@ -882,18 +882,18 @@ impl DeviceCapability {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[serde(tag = "dataType")]
+#[serde(tag = "dataType", content = "content")]
 #[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub enum DeviceParameters {
     #[serde(rename = "ENUM")]
     Enum { options: Vec<EnumOption> },
+
     #[serde(rename = "INTEGER")]
-    Integer {
-        unit: Option<String>,
-        range: IntegerRange,
-    },
+    Integer { unit: Option<String>, range: IntegerRange },
+
     #[serde(rename = "STRUCT")]
     Struct { fields: Vec<StructField> },
+
     #[serde(rename = "Array")]
     Array {
         size: Option<ArraySize>,
@@ -904,6 +904,10 @@ pub enum DeviceParameters {
         #[serde(default)]
         options: Vec<ArrayOption>,
     },
+
+    // Added fallback so parsing won’t crash when the value is not structured
+    #[serde(other)]
+    Other,
 }
 
 impl DeviceParameters {
