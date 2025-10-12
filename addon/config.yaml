@@ -1,6 +1,6 @@
 name: Govee to MQTT Bridge
-image: ghcr.io/borexola/goveemqtt-{arch}
-version: "2025.04.13-17d43d72"
+version: "1.0.0"
+image: ghcr.io/borexola/govee2mqtt-{arch}
 slug: goveemqtt
 description: Control Govee Devices
 url: https://github.com/borexola/goveemqtt
