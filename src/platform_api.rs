@@ -258,7 +258,7 @@ impl GoveeApiClient {
                 }
 
                 match &cap.parameters {
-                    Some(DeviceParameters::Enum { .. }) => {
+                    Some(DeviceParameters::Typed(TypedDeviceParameters::Enum { .. })) => {
                         result.push(cap.clone());
                     }
                     None => {
@@ -289,7 +289,7 @@ impl GoveeApiClient {
             .context("list_scene_names: get_scene_caps")?;
         for cap in caps {
             match &cap.parameters {
-                Some(DeviceParameters::Enum { options }) => {
+                Some(DeviceParameters::Typed(TypedDeviceParameters::Enum { options })) => {
                     for opt in options {
                         result.push(opt.name.to_string());
                     }
@@ -300,11 +300,11 @@ impl GoveeApiClient {
 
         // Add in music modes
         if let Some(cap) = device.capability_by_instance("musicMode") {
-            if let Some(DeviceParameters::Struct { fields }) = &cap.parameters {
+            if let Some(DeviceParameters::Typed(TypedDeviceParameters::Struct { fields })) = &cap.parameters {
                 for f in fields {
                     if f.field_name == "musicMode" {
                         match &f.field_type {
-                            DeviceParameters::Enum { options } => {
+                            DeviceParameters::Typed(TypedDeviceParameters::Enum { options }) => {
                                 for opt in options {
                                     result.push(format!("Music: {}", opt.name));
                                 }
@@ -351,7 +351,7 @@ impl GoveeApiClient {
         let caps = self.get_scene_caps(device).await?;
         for cap in caps {
             match &cap.parameters {
-                Some(DeviceParameters::Enum { options }) => {
+                Some(DeviceParameters::Typed(TypedDeviceParameters::Enum { options })) => {
                     for opt in options {
                         if scene.eq_ignore_ascii_case(&opt.name) {
                             return self.control_device(&device, &cap, opt.value.clone()).await;
@@ -447,10 +447,10 @@ impl GoveeApiClient {
             .capability_by_instance("brightness")
             .ok_or_else(|| anyhow::anyhow!("device has no brightness"))?;
         let value = match &cap.parameters {
-            Some(DeviceParameters::Integer {
+            Some(DeviceParameters::Typed(TypedDeviceParameters::Integer {
                 range: IntegerRange { min, max, .. },
                 ..
-            }) => (percent as u32).max(*min).min(*max),
+            })) => (percent as u32).max(*min).min(*max),
             _ => anyhow::bail!("unexpected parameter type for brightness"),
         };
         self.control_device(&device, &cap, value).await
@@ -465,10 +465,10 @@ impl GoveeApiClient {
             .capability_by_instance("colorTemperatureK")
             .ok_or_else(|| anyhow::anyhow!("device has no colorTemperatureK"))?;
         let value = match &cap.parameters {
-            Some(DeviceParameters::Integer {
+            Some(DeviceParameters::Typed(TypedDeviceParameters::Integer {
                 range: IntegerRange { min, max, .. },
                 ..
-            }) => (kelvin).max(*min).min(*max),
+            })) => (kelvin).max(*min).min(*max),
             _ => anyhow::bail!("unexpected parameter type for colorTemperatureK"),
         };
         self.control_device(&device, &cap, value).await
@@ -711,7 +711,7 @@ impl HttpDeviceInfo {
         let cap = self.capability_by_instance("segmentedColorRgb")?;
         let field = cap.struct_field_by_name("segment")?;
         match field.field_type {
-            DeviceParameters::Array {
+            DeviceParameters::Typed(TypedDeviceParameters::Array {
                 size:
                     Some(ArraySize {
                         // These are the display indices. eg: 1-based
@@ -728,7 +728,7 @@ impl HttpDeviceInfo {
                         max: _,
                     }),
                 ..
-            } => {
+            }) => {
                 // This range is an inclusive range, so add 1
                 let num_segments = (1 + label_max).saturating_sub(label_min);
                 // Return our exclusive range
@@ -742,10 +742,10 @@ impl HttpDeviceInfo {
         let cap = self.capability_by_instance("segmentedBrightness")?;
         let field = cap.struct_field_by_name("brightness")?;
         match &field.field_type {
-            DeviceParameters::Integer {
+            DeviceParameters::Typed(TypedDeviceParameters::Integer {
                 range: IntegerRange { min, max, .. },
                 ..
-            } => Some((*min, *max)),
+            }) => Some((*min, *max)),
             _ => None,
         }
     }
@@ -754,10 +754,10 @@ impl HttpDeviceInfo {
         let cap = self.capability_by_instance("colorTemperatureK")?;
 
         match cap.parameters {
-            Some(DeviceParameters::Integer {
+            Some(DeviceParameters::Typed(TypedDeviceParameters::Integer {
                 range: IntegerRange { min, max, .. },
                 ..
-            }) => Some((min, max)),
+            })) => Some((min, max)),
             _ => None,
         }
     }
@@ -848,6 +848,7 @@ pub enum DeviceCapabilityKind {
     Online = "devices.capabilities.online",
     Property = "devices.capabilities.property",
     Event = "devices.capabilities.event",
+    MovieSetting = "devices.capabilities.movie_setting",
 }
 }
 
@@ -873,7 +874,7 @@ impl DeviceCapability {
 
     pub fn struct_field_by_name(&self, name: &str) -> Option<&StructField> {
         match &self.parameters {
-            Some(DeviceParameters::Struct { fields }) => {
+            Some(DeviceParameters::Typed(TypedDeviceParameters::Struct { fields })) => {
                 fields.iter().find(|f| f.field_name == name)
             }
             _ => None,
@@ -881,10 +882,30 @@ impl DeviceCapability {
     }
 }
 
+// Wrapper enum that gracefully handles unknown parameter types
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[serde(tag = "dataType", content = "content")]
-#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
+#[serde(untagged)]
 pub enum DeviceParameters {
+    // Try to parse as a known typed parameter first
+    Typed(TypedDeviceParameters),
+    // Fallback for any unknown structure, string, number, null, etc.
+    Unknown(JsonValue),
+}
+
+impl DeviceParameters {
+    pub fn enum_parameter_by_name(&self, name: &str) -> Option<u32> {
+        match self {
+            DeviceParameters::Typed(typed) => typed.enum_parameter_by_name(name),
+            _ => None,
+        }
+    }
+}
+
+// The actual typed parameters that we know about
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(tag = "dataType")]
+#[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
+pub enum TypedDeviceParameters {
     #[serde(rename = "ENUM")]
     Enum { options: Vec<EnumOption> },
 
@@ -904,16 +925,12 @@ pub enum DeviceParameters {
         #[serde(default)]
         options: Vec<ArrayOption>,
     },
-
-    // Added fallback so parsing won’t crash when the value is not structured
-    #[serde(other)]
-    Other,
 }
 
-impl DeviceParameters {
+impl TypedDeviceParameters {
     pub fn enum_parameter_by_name(&self, name: &str) -> Option<u32> {
         match self {
-            DeviceParameters::Enum { options } => options
+            TypedDeviceParameters::Enum { options } => options
                 .iter()
                 .find(|e| e.name == name && e.value.is_i64())
                 .map(|e| e.value.as_i64().expect("i64") as u32),
