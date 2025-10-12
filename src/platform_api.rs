@@ -923,11 +923,11 @@ impl DeviceParameters {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-// No deny_unknown_fields here, because we embed via flatten
 pub struct StructField {
     #[serde(rename = "fieldName")]
     pub field_name: String,
 
+    // this really is a DeviceParameters value, not a method
     #[serde(flatten)]
     pub field_type: DeviceParameters,
 
@@ -936,6 +936,17 @@ pub struct StructField {
 
     #[serde(default)]
     pub required: bool,
+}
+
+impl StructField {
+    // Keep helper methods for back‑compatibility -- they just return refs
+    pub fn field_type(&self) -> &DeviceParameters {
+        &self.field_type
+    }
+
+    pub fn default_value(&self) -> Option<&JsonValue> {
+        self.default_value.as_ref()
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
