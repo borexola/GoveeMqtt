@@ -22,6 +22,7 @@ on:
 
 env:
   IMAGE: ghcr.io/borexola/goveemqtt
+  ADDON_VERSION: 1.0.0
 
 jobs:
   build:
