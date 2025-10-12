@@ -1,0 +1,3 @@
+name: Govee to MQTT Bridge
+url: https://github.com/borexola/GoveeMqtt
+maintainer: Wez Furlong <govee2mqtt@wez.wezfurlong.org>
