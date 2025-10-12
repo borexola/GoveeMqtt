@@ -3,7 +3,7 @@ image: ghcr.io/wez/govee2mqtt-{arch}
 version: "2025.04.13-17d43d72"
 slug: govee2mqtt
 description: Control Govee Devices
-url: https://github.com/wez/govee2mqtt
+url: https://github.com/borexola/goveemqtt
 arch:
   - amd64
   - aarch64
