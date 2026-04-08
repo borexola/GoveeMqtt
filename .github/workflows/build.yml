@@ -169,6 +169,5 @@ jobs:
           args: |
             --amd64 \
             --aarch64 \
-            --armv7 \
             --target /data/addon \
             --release "${{ env.ADDON_VERSION }}"
