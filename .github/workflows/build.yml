@@ -1,5 +1,4 @@
 name: Build
-
 on:
   pull_request:
     branches:
@@ -19,11 +18,9 @@ on:
       - "scripts/build-docker.sh"
       - "Dockerfile"
       - ".dockerignore"
-
 env:
   IMAGE: ghcr.io/borexola/goveemqtt
-  ADDON_VERSION: 1.0.0
-
+  ADDON_VERSION: 1.0.1
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -105,7 +102,6 @@ jobs:
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
-
   merge:
     if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
@@ -171,6 +167,8 @@ jobs:
         uses: home-assistant/builder@master
         with:
           args: |
-            --all \
+            --amd64 \
+            --aarch64 \
+            --armv7 \
             --target /data/addon \
             --release "${{ env.ADDON_VERSION }}"
