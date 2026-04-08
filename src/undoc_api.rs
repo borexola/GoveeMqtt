@@ -15,8 +15,8 @@ use std::time::Duration;
 use uuid::Uuid;
 
 // <https://github.com/constructorfleet/homebridge-ultimate-govee/blob/main/src/data/clients/RestClient.ts>
+const APP_VERSION: &str = "6.2.0";
 
-const APP_VERSION: &str = "5.6.01";
 const HALF_DAY: Duration = Duration::from_secs(3600 * 12);
 const ONE_DAY: Duration = Duration::from_secs(86400);
 const ONE_WEEK: Duration = Duration::from_secs(86400 * 7);
@@ -188,7 +188,6 @@ impl GoveeUndocumentedApi {
                 }
 
                 let resp: Response = http_response_body(response).await?;
-
                 Ok(CacheComputeResult::Value(resp.data))
             },
         )
@@ -207,6 +206,12 @@ impl GoveeUndocumentedApi {
                 Method::POST,
                 "https://app2.govee.com/account/rest/account/v1/login",
             )
+            .header("appVersion", APP_VERSION)
+            .header("clientId", &self.client_id)
+            .header("clientType", "1")
+            .header("iotVersion", "0")
+            .header("timestamp", ms_timestamp())
+            .header("User-Agent", user_agent())
             .json(&serde_json::json!({
                 "email": self.email,
                 "password": self.password,
@@ -214,8 +219,6 @@ impl GoveeUndocumentedApi {
             }))
             .send()
             .await?;
-
-        let resp: Response = http_response_body(response).await?;
 
         #[derive(Deserialize, Serialize, Debug)]
         #[allow(non_snake_case, dead_code)]
@@ -225,6 +228,7 @@ impl GoveeUndocumentedApi {
             status: u64,
         }
 
+        let resp: Response = http_response_body(response).await?;
         let ttl = Duration::from_secs(resp.client.token_expire_cycle as u64);
         Ok(CacheComputeResult::WithTtl(resp.client, ttl))
     }
@@ -273,7 +277,6 @@ impl GoveeUndocumentedApi {
         }
 
         let resp: DevicesResponse = http_response_body(response).await?;
-
         Ok(resp)
     }
 
@@ -297,6 +300,12 @@ impl GoveeUndocumentedApi {
                     .timeout(Duration::from_secs(60))
                     .build()?
                     .request(Method::POST, "https://community-api.govee.com/os/v1/login")
+                    .header("appVersion", APP_VERSION)
+                    .header("clientId", &self.client_id)
+                    .header("clientType", "1")
+                    .header("iotVersion", "0")
+                    .header("timestamp", ms_timestamp())
+                    .header("User-Agent", user_agent())
                     .json(&serde_json::json!({
                         "email": self.email,
                         "password": self.password,
@@ -329,7 +338,6 @@ impl GoveeUndocumentedApi {
                     .duration_since(std::time::UNIX_EPOCH)
                     .expect("unix epoch in the past")
                     .as_millis();
-
                 let ttl_ms = resp.data.expiredAt as u128 - ts_ms;
                 let ttl = Duration::from_millis(ttl_ms as u64).min(ONE_DAY);
 
@@ -341,7 +349,6 @@ impl GoveeUndocumentedApi {
 
     pub async fn get_scenes_for_device(sku: &str) -> anyhow::Result<Vec<LightEffectCategory>> {
         let key = format!("scenes-{sku}");
-
         cache_get(
             CacheGetOptions {
                 topic: "undoc-api",
@@ -367,7 +374,6 @@ impl GoveeUndocumentedApi {
                     .await?;
 
                 let resp: LightEffectLibraryResponse = http_response_body(response).await?;
-
                 Ok(CacheComputeResult::Value(resp.data.categories))
             },
         )
@@ -380,6 +386,7 @@ impl GoveeUndocumentedApi {
         sku: &str,
     ) -> anyhow::Result<Vec<DeviceCapability>> {
         let catalog = Self::get_scenes_for_device(sku).await?;
+
         let mut options = vec![];
 
         for c in catalog {
@@ -442,7 +449,6 @@ impl GoveeUndocumentedApi {
                 }
 
                 let resp: OneClickResponse = http_response_body(response).await?;
-
                 Ok(CacheComputeResult::Value(resp.data.components))
             },
         )
@@ -453,15 +459,12 @@ impl GoveeUndocumentedApi {
         let token = self.login_community().await?;
         let res = self.get_saved_one_click_shortcuts(&token).await?;
         let mut result = vec![];
-
         for group in res {
             for oc in group.one_clicks {
                 if oc.iot_rules.is_empty() {
                     continue;
                 }
-
                 let name = format!("One-Click: {}: {}", group.name, oc.name);
-
                 let mut entries = vec![];
                 for rule in oc.iot_rules {
                     if let Some(topic) = rule.device_obj.topic {
@@ -469,7 +472,6 @@ impl GoveeUndocumentedApi {
                         entries.push(ParsedOneClickEntry { topic, msgs });
                     }
                 }
-
                 result.push(ParsedOneClick { name, entries });
             }
         }
@@ -586,27 +588,21 @@ pub struct OneClickComponent {
     pub can_disable: Option<u8>,
     #[serde(deserialize_with = "boolean_int")]
     pub can_manage: bool,
-
     pub feast_type: Option<u64>,
     #[serde(default)]
     pub feasts: Vec<JsonValue>,
-
     #[serde(default)]
     pub groups: Vec<JsonValue>,
-
     pub main_device: Option<JsonValue>,
-
     pub component_id: u64,
     #[serde(default)]
     pub environments: Vec<JsonValue>,
     pub name: String,
     #[serde(rename = "type")]
     pub component_type: u64,
-
     pub guide_url: Option<String>,
     pub h5_url: Option<String>,
     pub video_url: Option<String>,
-
     #[serde(default)]
     pub one_clicks: Vec<OneClick>,
 }
@@ -671,9 +667,7 @@ pub struct OneClickIotRuleDevice {
     pub name: Option<String>,
     pub device: Option<String>,
     pub sku: Option<String>,
-
     pub topic: Option<Redacted<String>>,
-
     pub ble_address: Option<String>,
     pub ble_name: Option<String>,
     pub device_splicing_status: u32,
@@ -690,13 +684,11 @@ pub struct OneClickIotRuleDevice {
     pub is_feast: bool,
     pub pact_type: Option<u32>,
     pub pact_code: Option<u32>,
-
     pub settings: Option<JsonValue>,
     pub spec: Option<String>,
     pub sub_device: String,
     pub sub_device_num: u64,
     pub sub_devices: Option<JsonValue>,
-
     pub version_hard: Option<String>,
     pub version_soft: Option<String>,
     pub wifi_soft_version: Option<String>,
@@ -848,17 +840,14 @@ pub struct DeviceSettings {
     /// millisecond timestamp
     pub time: Option<u64>,
     pub wifi_level: Option<i64>,
-
     pub pm25_min: Option<i64>,
     pub pm25_max: Option<i64>,
     pub pm25_warning: Option<bool>,
-
     /// `{"sub_0": {"name": "Device Name"}}`
     pub sub_devices: Option<JsonValue>,
     pub bd_type: Option<i64>,
     #[serde(deserialize_with = "boolean_int", default)]
     pub filter_expire_on_off: bool,
-
     /// eg: Glide Hexa. Value is base64 encoded data
     pub shapes: Option<String>,
     pub support_ble_broad_v3: Option<bool>,
@@ -883,7 +872,6 @@ pub struct ExtResources {
 pub struct LastDeviceData {
     pub online: Option<bool>,
     pub bind: Option<bool>,
-
     pub tem: Option<i64>,
     pub hum: Option<i64>,
     /// timestamp in milliseconds
@@ -898,9 +886,7 @@ where
     S: serde::Serializer,
 {
     use serde::ser::Error as _;
-
     let s = serde_json::to_string(value).map_err(|e| S::Error::custom(format!("{e:#}")))?;
-
     s.serialize(serializer)
 }
 
